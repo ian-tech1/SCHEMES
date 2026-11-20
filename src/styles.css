@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap");
+@import "tailwindcss";
+
+/* Dark mode is a class on <html> (see src/lib/theme.ts), not only a media
+   query, so a teacher can override their phone's setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --color-paper: #f4efe4;
+  --color-ink: #1c3144;
+  --color-card: #fffdf8;
+  --color-line: #e3d7c4;
+  --color-leaf: #1f6b45;
+  --color-gold: #b8892d;
+  --color-clay: #b5523a;
+  --radius-lg: 1rem;
+  --radius-xl: 1.4rem;
+}
+
+/* Same tokens, night palette. Components read the tokens, so the whole app
+   follows without a single `dark:` utility. */
+.dark {
+  --color-paper: #10171d;
+  --color-ink: #e8e1d3;
+  --color-card: #18222b;
+  --color-line: #2c3a45;
+  --color-leaf: #57b98a;
+  --color-gold: #dcae55;
+  --color-clay: #e2856b;
+  color-scheme: dark;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-leaf);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-leaf);
+    color: var(--color-paper);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+}
+
+/* Native controls (date pickers, selects, checkboxes) follow the tokens too. */
+input,
+select,
+textarea {
+  color-scheme: inherit;
+}
