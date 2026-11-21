@@ -135,6 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <nav className="flex flex-1 gap-1 overflow-x-auto text-sm font-semibold" aria-label="Main">
               <Link to="/desk" className={navLink} activeProps={{ className: navActive }}>Desk</Link>
               <Link to="/generate" search={{ from: "" }} className={navLink} activeProps={{ className: navActive }}>New scheme</Link>
+              <Link to="/local-generate" className={navLink} activeProps={{ className: navActive }}>Local AI</Link>
               <Link to="/create" className={navLink} activeProps={{ className: navActive }}>Create resource</Link>
               <Link to="/curriculum" className={navLink} activeProps={{ className: navActive }}>Curriculum</Link>
               <Link to="/past-papers" className={navLink} activeProps={{ className: navActive }}>Past papers</Link>
