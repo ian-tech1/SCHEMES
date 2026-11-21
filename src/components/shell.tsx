@@ -144,6 +144,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link to="/variables" className={navLink} activeProps={{ className: navActive }}>Variables</Link>
               <Link to="/calendar" className={navLink} activeProps={{ className: navActive }}>Calendar</Link>
               <Link to="/profile" className={navLink} activeProps={{ className: navActive }}>Profile</Link>
+              <Link to="/updates" className={navLink} activeProps={{ className: navActive }}>Updates</Link>
               {me && (me.profile.role === "admin" || me.profile.role === "deputy") ? (
                 <Link to="/admin" className={navLink} activeProps={{ className: navActive }}>Admin desk</Link>
               ) : null}

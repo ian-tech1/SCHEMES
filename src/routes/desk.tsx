@@ -53,7 +53,24 @@ function DeskBody() {
         </Panel>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/generate" search={{ from: "" }} className="rounded-2xl border border-line bg-card p-4">
+          <p className="font-display text-xl">New scheme</p>
+          <p className="mt-1 text-sm text-ink/70">One strand, then its sub-strands.</p>
+        </Link>
+        <Link to="/create" className="rounded-2xl border border-line bg-card p-4">
+          <p className="font-display text-xl">Notes or exam</p>
+          <p className="mt-1 text-sm text-ink/70">Teaching notes, revision, or a paper.</p>
+        </Link>
+        <Link to="/past-papers" className="rounded-2xl border border-line bg-card p-4">
+          <p className="font-display text-xl">Practice papers</p>
+          <p className="mt-1 text-sm text-ink/70">Choose the year, including 2026.</p>
+        </Link>
+        <Link to="/updates" className="rounded-2xl border border-line bg-card p-4">
+          <p className="font-display text-xl">Updates</p>
+          <p className="mt-1 text-sm text-ink/70">Term dates, band and week tools.</p>
+        </Link>
+      </div>
         <Panel>
           <p className="text-sm text-ink/70">Downloads</p>
           <p className="font-display text-3xl">{me.downloadsFree ? "Free" : me.settings.priceKes === 0 ? "Free baseline" : `From KES ${me.settings.priceKes}`}</p>
