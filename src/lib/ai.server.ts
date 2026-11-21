@@ -189,8 +189,9 @@ Write learner notes JSON that still teaches the subject, not study tips:
 4 vocabulary items. 2 sections. Do not write a full chapter.`;
   }
   return `The teacher asked for FULL notes that read like Junior School teaching notes for Grades 7, 8 and 9, and go further than a short textbook page. Use this order and do not write a lesson plan.
-Open with the strand name, then the numbered sub-strand, then the meaning in one sentence a learner can copy. Follow with importance as separate sentences a learner can underline. Then types, stages, parts, properties or steps, each named. Then worked examples with the answer on its own line. Then a short assignment. Then an exercise. Finish that sub-strand before the next one.
-Go further than the textbook: add the check, the unit or the sign, a Kenyan school or home case, and the mistake learners make on that step.
+Open with a contents list: strand, sub-strand, and a page number. Then finish one sub-strand completely before the next.
+For every sub-strand use this order: the strand name, the numbered sub-strand, the meaning in one sentence a learner can copy, importance as separate sentences, the types or steps each named, five fully worked examples with the answer on its own line, a Kenyan school or home case, the check, the common mistake, then the exercise.
+Go further than a short textbook page, but do not copy a commercial notes booklet.
 Return JSON:
 {
   "summary": "Two opening paragraphs. Name the strand and grade. Say these are classroom teaching notes, not an official textbook.",
@@ -385,7 +386,7 @@ export function parseModelJson(text: string): unknown {
 const MAX: Record<Brief["kind"], number> = {
   scheme: 8000,
   lesson: 5000,
-  notes: 16000,
+  notes: 20000,
   revision: 16000,
 };
 

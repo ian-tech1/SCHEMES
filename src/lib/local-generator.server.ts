@@ -282,42 +282,46 @@ function teachingParagraphs(family: ReturnType<typeof noteFamily>, strand: strin
 }
 
 function teachingExamples(family: ReturnType<typeof noteFamily>, strand: string, topic: string, count: number): string[] {
+  const kinds = ["a direct item", "a word problem", "a reverse check", "a two-step item", "a classroom case"];
   return Array.from({ length: count }, (_, offset) => {
     const e = offset + 1;
+    const kind = kinds[offset % kinds.length];
     if (family === "math" && /integer|directed|negative/i.test(topic)) {
       const a = -3 - e;
       const b = 4 + e;
-      return `Example ${e}. Evaluate ${a} + ${b}.\n1. Start at ${a} on the number line.\n2. Move ${b} steps to the right.\n3. ${a} + ${b} = ${a + b}.\nAnswer: ${a + b}`;
+      return `Example ${e} (${kind}). Evaluate ${a} + ${b}.\n1. Start at ${a} on the number line.\n2. Move ${b} steps to the right.\n3. ${a} + ${b} = ${a + b}.\n4. Check by counting back ${b} steps from ${a + b}. You return to ${a}.\nAnswer: ${a + b}`;
     }
     if (family === "math" && /equation|linear|algebra/i.test(topic)) {
       const x = 2 + e;
       const coeff = 2 + (e % 3);
-      return `Example ${e}. Solve ${coeff}x + ${e} = ${coeff * x + e}.\n1. Subtract ${e} from both sides.\n2. Divide by ${coeff}.\n3. x = ${x}.\n4. Check: ${coeff}(${x}) + ${e} = ${coeff * x + e}.\nAnswer: x = ${x}`;
+      return `Example ${e} (${kind}). Solve ${coeff}x + ${e} = ${coeff * x + e}.\n1. Subtract ${e} from both sides.\n2. Divide by ${coeff}.\n3. x = ${x}.\n4. Check: ${coeff}(${x}) + ${e} = ${coeff * x + e}. Both sides agree.\nAnswer: x = ${x}`;
     }
     if (family === "math" && /ratio|rate|percent/i.test(topic)) {
       const marked = 200 * e;
       const percent = 5 * e;
       const discount = (marked * percent) / 100;
-      return `Example ${e}. A shop offers ${percent}% off an item marked KSh ${marked}.\n1. Discount = KSh ${discount}.\n2. Amount paid = KSh ${marked - discount}.\nAnswer: KSh ${marked - discount}`;
+      return `Example ${e} (${kind}). A shop offers ${percent}% off an item marked KSh ${marked}.\n1. Write ${percent}% as ${percent}/100.\n2. Discount = ${percent}/100 × ${marked} = KSh ${discount}.\n3. Amount paid = ${marked} − ${discount} = KSh ${marked - discount}.\n4. Check: discount + amount paid = KSh ${marked}.\nAnswer: KSh ${marked - discount}`;
     }
     if (family === "math") {
-      const a = 12 + e;
+      const a = 12 + e * 3;
       const b = 3 + (e % 4);
-      return `Example ${e}. A class uses ${a} items in groups of ${b} while studying ${topic}.\n1. ${a} ÷ ${b} = ${Math.floor(a / b)} groups, remainder ${a % b}.\n2. State what the remainder means in the story.\nAnswer: ${Math.floor(a / b)} groups, remainder ${a % b}.`;
+      const groups = Math.floor(a / b);
+      const remainder = a % b;
+      return `Example ${e} (${kind}). A class uses ${a} items in groups of ${b} while studying ${topic} in ${strand}.\n1. Write what is given: ${a} items, groups of ${b}.\n2. ${a} ÷ ${b} = ${groups} groups, remainder ${remainder}.\n3. The remainder means ${remainder} item${remainder === 1 ? "" : "s"} cannot make a full group.\n4. Check: ${groups} × ${b} + ${remainder} = ${a}.\nAnswer: ${groups} groups, remainder ${remainder}.`;
     }
     if (family === "language") {
-      return `Example ${e}. Read: "The learners in ${strand} wrote about ${topic}."\n1. Name the naming words.\n2. Say what job ${topic} does in the sentence.\nAnswer: learners is a naming word; ${topic} is the idea the sentence is about.`;
+      return `Example ${e} (${kind}). Read: "The learners in ${strand} wrote about ${topic}."\n1. Name the naming words.\n2. Say what job ${topic} does in the sentence.\n3. Give one non-example that does not do that job.\nAnswer: learners is a naming word; ${topic} is the idea the sentence is about.`;
     }
     if (family === "science") {
-      return `Example ${e}. A class investigates ${topic}.\n1. They change one thing and keep the rest the same.\n2. They write the observation before the conclusion.\nAnswer: the fair test has one change, and the conclusion follows the record.`;
+      return `Example ${e} (${kind}). A class investigates ${topic}.\n1. They change one thing and keep the rest the same.\n2. They write the observation before the conclusion.\n3. They name the safety point for this investigation.\nAnswer: the fair test has one change, the conclusion follows the record, and the safety point is stated.`;
     }
     if (family === "faith") {
-      return `Example ${e}. A learner explains ${topic} to a classmate.\n1. Give the meaning in one sentence.\n2. Name one habit it asks for at school.\nAnswer: the meaning is stated, and the habit is practical.`;
+      return `Example ${e} (${kind}). A learner explains ${topic} to a classmate.\n1. Give the meaning in one sentence.\n2. Name one habit it asks for at school.\n3. Say what would be a weak answer.\nAnswer: the meaning is stated, the habit is practical, and a copied line with no habit is the weak answer.`;
     }
     if (family === "social") {
-      return `Example ${e}. Use ${topic} to explain one change in a Kenyan school community.\n1. State one cause.\n2. State one effect.\nAnswer: the cause and the effect are different sentences, and both stay on ${topic}.`;
+      return `Example ${e} (${kind}). Use ${topic} to explain one change in a Kenyan school community.\n1. State one cause.\n2. State one effect.\n3. Name one responsibility a learner has.\nAnswer: the cause, the effect and the responsibility are three different sentences, and all stay on ${topic}.`;
     }
-    return `Example ${e}. Plan a short task on ${topic} in ${strand}.\n1. List the materials.\n2. Write the first three steps.\n3. Name the safety point.\nAnswer: materials, order and safety are all present.`;
+    return `Example ${e} (${kind}). Plan a short task on ${topic} in ${strand}.\n1. List the materials.\n2. Write the first three steps in order.\n3. Name the safety point and how you will know the work is finished.\nAnswer: materials, order, safety and the finish check are all present.`;
   });
 }
 
@@ -329,7 +333,7 @@ function notesDraft(brief: Brief) {
   const full = brief.depth !== "summary";
 
   const summary = full
-    ? `${brief.grade} ${brief.subject}. STRAND: ${brief.strand}. These notes follow the teaching-notes order: the strand, then each sub-strand, then the meaning, the importance, the parts or steps, worked examples, and an exercise. They go further than a short textbook page by adding the check and the mistake to avoid. Finish one strand before the next. Confirm every fact against the current curriculum design and the approved class text before you print.`
+    ? `${brief.grade} ${brief.subject}. STRAND: ${brief.strand}. These notes follow teaching-notes order. Finish one sub-strand before the next. Each sub-strand has the meaning, the importance, the steps, five worked examples, a check, and an exercise. They are classroom notes, not an official KICD textbook. Confirm every fact against the current curriculum design and the approved class text before you teach or print.`
     : `Short notes for ${primary}.`;
 
   const contents = ordered.slice(0, full ? 12 : 3).map((item, index) => ({
