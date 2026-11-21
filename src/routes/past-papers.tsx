@@ -14,10 +14,19 @@ import { DEFAULT_SCHEME_COLUMNS } from "@/lib/scheme-format";
 
 export const Route = createFileRoute("/past-papers")({ component: PastPapersPage });
 
+const PAPER_YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
+
 const OFFICIAL = [
   { label: "KNEC KJSEA regulations", href: "https://www.knec.ac.ke/wp-content/uploads/2026/02/KJSEA-REGULATIONS.pdf" },
   { label: "KNEC home", href: "https://www.knec.ac.ke/" },
 ];
+
+function kjseaNote(seriesId: string, grade: string, subject: string, year: number) {
+  if (seriesId === "junior" && grade === "Grade 9" && subject.toLowerCase().includes("math") && year >= 2025) {
+    return `${year} Grade 9 Mathematics uses the KJSEA layout: Section A has 20 multiple-choice items and Section B has questions 21–40 in five tasks. 100 marks, 2 hours. It is school practice, not an official paper.`;
+  }
+  return `A ${year} ${subject} practice paper, with a context, parts, marks and a marking guide. It follows the habits of that year's series. It is not an official KNEC paper.`;
+}
 
 function currentTerm() {
   const month = new Date().getMonth() + 1;
@@ -67,6 +76,7 @@ function PastPapersBody() {
   const [grade, setGrade] = useState(series.grades.at(-1) ?? "Grade 9");
   const [subject, setSubject] = useState("Mathematics");
   const [pathway, setPathway] = useState("STEM");
+  const [paperYear, setPaperYear] = useState(2026);
   const [busy, setBusy] = useState("");
   const subjects = useMemo(
     () => subjectsForPathway(series.level, grade, pathway),
@@ -89,7 +99,7 @@ function PastPapersBody() {
       return;
     }
     const scope = paperScope(subject, grade);
-    const kjsea = series.id === "junior" && grade === "Grade 9" && subject.toLowerCase().includes("math");
+    const kjsea = series.id === "junior" && grade === "Grade 9" && subject.toLowerCase().includes("math") && paperYear >= 2025;
     setBusy("Grok is setting the paper…");
     const result = await generateDocumentQueued({
       kind: "exam",
@@ -101,7 +111,7 @@ function PastPapersBody() {
       substrands: scope.substrands,
       selectedTopics: scope.selectedTopics,
       term: currentTerm(),
-      year: new Date().getFullYear(),
+      year: paperYear,
       weekFrom: 1,
       weekTo: 1,
       lessonsPerWeek: 1,
@@ -114,13 +124,13 @@ function PastPapersBody() {
       questionDifficulty: "balanced",
       assessmentMode: kjsea ? "kjsea-format" : "practice",
       depth: "full",
-      teacherGuidance: series.guidance,
+      teacherGuidance: `${series.guidance} Set this as a ${paperYear} ${series.label} practice paper. Use the paper habits of that year. Do not copy a live paper and do not claim KNEC issued it.`,
       columns: DEFAULT_SCHEME_COLUMNS,
       textbooks: [],
       lessonMinutes: 40,
       termStart: "",
       reflectionMode: "prompt",
-      coverNote: "School practice paper. Not an official KNEC paper.",
+      coverNote: `School practice paper in the style of the ${paperYear} series. Not an official KNEC paper.`,
       assessmentMethods: ["Written exercise"],
       showApproval: false,
       safetyNote: false,
@@ -209,6 +219,9 @@ function PastPapersBody() {
           <label className="text-sm font-semibold">Learning area
             <select className={`${fieldClass} mt-1`} value={subject} onChange={(event) => setSubject(event.target.value)}>{subjects.map((item) => <option key={item}>{item}</option>)}</select>
           </label>
+          <label className="text-sm font-semibold">Year the series was done
+            <select className={`${fieldClass} mt-1`} value={paperYear} onChange={(event) => setPaperYear(Number(event.target.value))}>{PAPER_YEARS.map((item) => <option key={item} value={item}>{item}{item === 2026 ? " — KJSEA / current" : ""}</option>)}</select>
+          </label>
           {series.level === "senior" ? <label className="text-sm font-semibold">Pathway
             <select className={`${fieldClass} mt-1`} value={pathway} onChange={(event) => {
               const next = event.target.value;
@@ -218,7 +231,7 @@ function PastPapersBody() {
             }}><option>STEM</option><option>Social Sciences</option><option>Arts and Sports Science</option></select>
           </label> : null}
         </div>
-        <p className="text-sm text-ink/70">{series.id === "junior" && grade === "Grade 9" && subject.toLowerCase().includes("math") ? "Grade 9 Mathematics uses the 2026 paper layout: Section A has 20 multiple-choice items and Section B has questions 21–40 in five tasks. 100 marks, 2 hours. It is school practice, not an official paper." : `${series.questionCount} exam-style items, with a context, parts, marks and a marking guide.`}</p>
+        <p className="text-sm text-ink/70">{kjseaNote(series.id, grade, subject, paperYear)}</p>
         {!ready ? <p className="rounded-lg bg-gold/15 p-3 text-sm">Add your name, school and phone on your profile before the first paper. <Link to="/profile" className="font-semibold text-leaf underline">Open profile</Link></p> : null}
         <button type="button" className={buttonClass("leaf")} disabled={!!busy || !ready} onClick={() => void writeAndSave().catch((error: unknown) => { toast.error(error instanceof Error ? error.message : "The paper could not be saved."); setBusy(""); })}>{busy || "Write and save both PDFs"}</button>
         <p className="text-xs text-ink/65">The files land in your phone’s downloads. The same paper stays in your library if you need it again. A teacher still checks every mark against the current KICD design.</p>

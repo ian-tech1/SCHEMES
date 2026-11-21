@@ -338,16 +338,13 @@ function notesDraft(brief: Brief) {
     page: 3 + index * 2,
   }));
 
-  const partTitles = ["Meaning", "Importance", "Parts and steps", "Worked examples", "A Kenyan case", "Exercise"];
-  const sectionCount = full ? 6 : 2;
-  const sections = Array.from({ length: sectionCount }, (_, idx) => {
-    const item = ordered[idx % Math.max(1, ordered.length)] ?? { strand: brief.strand, label: primary };
+  const sections = ordered.slice(0, full ? 8 : 2).map((item, idx) => {
     const topic = item.label;
     const sectionFamily = noteFamily(brief, `${topic} ${item.strand}`);
     return {
-      heading: `STRAND: ${item.strand}    ${idx + 1}. ${topic} — ${partTitles[idx] ?? "Notes"}`,
+      heading: `STRAND: ${item.strand}    ${idx + 1}. ${topic}`,
       paragraphs: teachingParagraphs(sectionFamily, item.strand, topic),
-      examples: teachingExamples(sectionFamily, item.strand, topic, full ? 8 : 1),
+      examples: teachingExamples(sectionFamily, item.strand, topic, full ? 5 : 1),
     };
   });
 

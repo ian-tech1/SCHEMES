@@ -141,13 +141,19 @@ function Login() {
                 key={provider.providerId}
                 type="button"
                 className={`${buttonClass("ghost")} w-full`}
-                onClick={() => signIn(provider.providerId, { callbackURL: "/desk" })}
+                onClick={() => {
+                  setError("");
+                  void signIn(provider.providerId, { callbackURL: "/desk" }).catch((err: unknown) => {
+                    setError(err instanceof Error ? err.message : `Continue with ${provider.label} did not open. Use email and password if this continues.`);
+                  });
+                }}
               >
                 Continue with {provider.label}
               </button>
             ))
           : null}
       </div>
+      <p className="mt-2 text-xs text-ink/60">Google and X sign-in open through the Grok account. Email and password stay on this site if that window does not finish.</p>
       <a className="mt-4 text-sm font-semibold text-leaf" href={waLink("254723278526")} target="_blank" rel="noreferrer">
         WhatsApp {IAN_NAME}
       </a>

@@ -229,12 +229,12 @@ Return JSON:
   "remember": ["eight short facts a learner can revise"],
   "mistakes": ["Mistake and the correction, six times"]
 }
-Use 10 to 14 vocabulary items and 6 to 12 sections. One section is one sub-strand or one operation inside it. Every section needs at least five worked examples. The exercise has 12 to 20 questions and the same number of worked answers. Do not copy a commercial notes booklet. Do not mention AI. Do not claim KICD or KNEC wrote this chapter.`;
+Use 10 to 14 vocabulary items and 6 to 12 sections. One section is one sub-strand. Every section needs at least five fully worked examples with the answer on its own line. The exercise has 12 to 20 questions and the same number of worked answers. Write the notes yourself from the selected topics. Do not copy a commercial notes booklet. Do not mention AI. Do not claim KICD or KNEC wrote this chapter.`;
 }
 
 function revisionSchema(b: Brief): string {
   if (b.assessmentMode === "kjsea-format") {
-    return `Create a Grade 9 Mathematics practice paper in the layout of the 2026 Kenya Junior School Education Assessment Mathematics paper. It is school practice, not an official KNEC paper. Do not copy any live paper, use a KNEC logo, or claim the council issued it.
+    return `Create a Grade 9 Mathematics practice paper in the layout of the ${b.year || 2026} Kenya Junior School Education Assessment Mathematics paper. It is school practice, not an official KNEC paper. Do not copy any live paper, use a KNEC logo, or claim the council issued it.
 Time: 2 hours. Total: 100 marks.
 Section A, questions 1–20: type "mcq", 1 mark each, exactly four options labelled A, B, C and D. Each item is a Kenyan school, market, farm or home word problem (money in words, a measurement, a percentage, a shape, ages). One correct key. No "all of the above".
 Section B, questions 21–40: type "structured", no options. Group them in the prompt with the task name. Marks, in this exact order: 21–25 are 4 each (Task 1, 20 marks); 26 is 4, 27 is 3, 28 is 3 (Task 2, 10 marks); 29–31 are 5, 32–33 are 4 (Task 3, 23 marks); 34–37 are 4, 38 is 3 (Task 4, 19 marks); 39–40 are 4 each (Task 5, 8 marks).
@@ -417,7 +417,7 @@ async function complete(apiKey: string, brief: Brief, model: string, withJsonMod
 }
 
 const OPENAI_COMPATIBLE: Partial<Record<AiProvider, { endpoint: string; envModel: string; defaultModel: string; fallbackModel?: string; fallbackModels?: string[]; headers?: Record<string, string> }>> = {
-  grok: { endpoint: "https://api.x.ai/v1/chat/completions", envModel: "XAI_MODEL", defaultModel: "grok-4.5", fallbackModels: ["grok-4", "grok-3", "grok-3-mini"] },
+  grok: { endpoint: "https://api.x.ai/v1/chat/completions", envModel: "XAI_MODEL", defaultModel: "grok-4.5", fallbackModels: ["grok-4.7", "grok-4.6", "grok-4.20", "grok-4-fast-non-reasoning", "grok-3-mini", "grok-3"] },
   groq: { endpoint: "https://api.groq.com/openai/v1/chat/completions", envModel: "GROQ_MODEL", defaultModel: "llama-3.3-70b-versatile", fallbackModels: ["llama-3.1-8b-instant", "gemma2-9b-it"] },
   openrouter: { endpoint: "https://openrouter.ai/api/v1/chat/completions", envModel: "OPENROUTER_MODEL", defaultModel: "meta-llama/llama-3.3-70b-instruct:free", fallbackModel: "google/gemma-2-9b-it:free", headers: { "HTTP-Referer": "https://ian-tech-schemes.vercel.app", "X-Title": "IAN TECH Schemes" } },
   deepseek: { endpoint: "https://api.deepseek.com/chat/completions", envModel: "DEEPSEEK_MODEL", defaultModel: "deepseek-chat", fallbackModel: "deepseek-reasoner" },
@@ -460,7 +460,11 @@ async function openAiCompatibleText(provider: AiProvider, apiKey: string, brief:
     try {
       let res = await complete(apiKey, brief, model, true, promptOverride, config.endpoint, config.headers, timeoutMs);
       if (res.status === 400) res = await complete(apiKey, brief, model, false, promptOverride, config.endpoint, config.headers, timeoutMs);
-      if (!res.ok) throw new Error(`${provider} API returned ${res.status}`);
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        const short = detail.replace(/\s+/g, " ").slice(0, 180);
+        throw new Error(`${provider} API returned ${res.status}${short ? `: ${short}` : ""}`);
+      }
       const payload = await res.json() as { choices?: { message?: { content?: unknown } }[] };
       const text = messageText(payload.choices?.[0]?.message?.content);
       if (!text.trim()) throw new Error(`${provider} returned an empty document`);
@@ -513,7 +517,8 @@ async function cloudflareText(apiKey: string, brief: Brief, promptOverride?: str
 
 async function geminiText(apiKey: string, brief: Brief, promptOverride?: string, timeoutMs = 50_000): Promise<string> {
   const primary = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const models = primary === "gemini-2.0-flash" ? [primary] : [primary, "gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = [primary, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"]
+    .filter((model, index, all) => model && all.indexOf(model) === index);
   let last: Error | null = null;
   for (const model of models) {
     try {
@@ -675,7 +680,7 @@ function safeWriterError(error: unknown): string {
   if (/401|403/.test(message)) return "The key was rejected.";
   if (/429|quota|rate limit/i.test(message)) return "The free limit was reached.";
   if (/timeout|aborted|exceeded the request time/i.test(message)) return "The writer took too long.";
-  if (/404|400|model/i.test(message)) return "The model was rejected.";
+  if (/returned (?:404|400|422)\b|model.?not.?found|does not exist|unknown model/i.test(message)) return "The model was rejected.";
   if (/empty document|readable document/i.test(message)) return "The reply could not be read.";
   if (/CLOUDFLARE_ACCOUNT_ID/i.test(message)) return "Cloudflare still needs an account id.";
   return "The writer did not finish.";
