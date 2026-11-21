@@ -195,8 +195,9 @@ function examFurniture(data: RevisionBody, learner: boolean): string[] {
   const sections = planSections(questions);
   const lines = [
     "School practice paper. Not issued by KNEC and not a KICD examination.",
-    `Time allowed: ${data.timeMinutes ?? "as instructed"} minutes. Total marks: ${total}. Answer all questions.`,
-    "Name: ________________________    Class: __________    Admission no.: __________",
+    `Time allowed: ${data.timeMinutes ?? "as instructed"} minutes. Total marks: ${total}. Answer all the questions in the spaces provided.`,
+    "Name: ________________________    School: ________________________    Index no.: __________",
+    "Mathematical tables have been provided. A silent non-programmable calculator may be used.",
     "Table of specification",
     ...sections.map((section) => `${section.name}: questions ${section.from}–${section.to}, ${section.marks} marks.`),
   ];

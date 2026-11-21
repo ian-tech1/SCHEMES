@@ -535,7 +535,7 @@ function assessmentDraft(brief: Brief) {
   });
   return {
     instructions: isKjsea
-      ? "School practice in the layout of the 2026 Kenya Junior School Education Assessment Mathematics paper. This is not a KNEC paper and it is not an official past paper. Time: 2 hours. Section A (20 marks): questions 1–20, multiple choice, four options A–D, one correct answer, answered on an answer sheet. Section B (80 marks): questions 21–40, show all working. Task 1 is questions 21–25 (20 marks). Task 2 is 26–28 (10 marks). Task 3 is 29–33 (23 marks). Task 4 is 34–38 (19 marks). Task 5 is 39–40 (8 marks). For π use 3.142 unless the question says otherwise."
+      ? "School practice in the layout of the 2026 Kenya Junior School Education Assessment Mathematics paper. This is not a KNEC paper. Time: 2 hours. Answer all the questions in the spaces provided. Mathematical tables have been provided. Silent non-programmable electronic calculators may be used. Section A (20 marks): questions 1–20 are multiple choice. Choose the correct answer and write A, B, C or D in the answer grid. Section B (80 marks): questions 21–40. Show all the working in the spaces provided. Task 1 is questions 21–25 (20 marks). Task 2 is 26–28 (10 marks). Task 3 is 29–33 (23 marks). Task 4 is 34–38 (19 marks). Task 5 is 39–40 (8 marks). For π use 3.142 unless the question says otherwise."
       : "Teacher-created practice template. Check every subject fact, example, answer and mark against the current KICD design and approved class material before use.",
     timeMinutes: isKjsea ? 120 : Math.min(120, Math.max(20, Math.round(count * 1.8))),
     questions,
