@@ -44,6 +44,21 @@ export type HealthReport = {
 
 const APP_NAME = "IANTECH SCHEMES";
 
+function firstValidAuthUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  for (const piece of value.split(/[\s,]+/)) {
+    const candidate = piece.trim().replace(/\/+$/, "");
+    if (!candidate || candidate.includes("your-app") || candidate.startsWith("://")) continue;
+    try {
+      const url = new URL(candidate);
+      if (url.protocol === "https:" || url.protocol === "http:") return url.origin;
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -178,14 +193,14 @@ export async function healthReport(): Promise<HealthReport> {
       : "Set ADMIN_SETUP_SECRET to exactly 32 random characters before claiming the first administrator.",
   });
 
-  const publicUrl = process.env.BETTER_AUTH_URL?.trim();
+  const publicUrl = firstValidAuthUrl(process.env.BETTER_AUTH_URL);
   checks.push({
     id: "auth-url",
     label: "Public URL",
     status: publicUrl ? "ok" : isProduction() ? "warn" : "ok",
     detail: publicUrl
-      ? `BETTER_AUTH_URL is ${publicUrl}.`
-      : "BETTER_AUTH_URL is not set. Sign-in links and cookies are derived from the request host; set it to the production domain if you use a custom domain.",
+      ? `Sign-in uses ${publicUrl}.`
+      : "BETTER_AUTH_URL is missing or is still the placeholder. Sign-in uses the address in the browser instead.",
   });
 
   const grokReady = Boolean(process.env.XAI_API_KEY?.trim());
