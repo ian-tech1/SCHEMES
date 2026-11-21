@@ -4,7 +4,12 @@ Kenyan CBC desk for Junior School: schemes of work, textbook-style notes, lesson
 
 ## Local AI (no API keys)
 
-The **Local AI** page (`/local-generate`) runs small language models entirely in the browser using Transformers.js. No API key is required, nothing leaves the device, and after the first download the model works offline. Available models: SmolLM2-360M, SmolLM2-135M, and Qwen2.5-0.5B.
+The **Local AI** page (`/local-generate`) runs models entirely in the browser. No API key is required and nothing leaves the device after the model is cached.
+
+**Engines:**
+- **Chrome built-in** — Gemini Nano (zero download if already present in Chrome 148+)
+- **WebLLM** — powerful WebGPU models (Llama 3.2, Qwen2.5, Phi-3.5, Gemma 2)
+- **Transformers.js** — compatible ONNX models that work on more devices
 
 ## Deploy on Vercel from GitHub
 

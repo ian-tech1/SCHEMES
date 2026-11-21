@@ -1,20 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Panel, Field, buttonClass, fieldClass } from "@/components/bits";
 import {
-  generateLocalText,
-  type LoadProgress,
+  ENGINES,
+  checkChromeAI,
+  generateWithEngine,
+  type Engine,
   type LocalModelId,
+  type LoadProgress,
 } from "@/lib/local-ai";
 
-const MODELS: { id: LocalModelId; label: string; note: string }[] = [
-  { id: "HuggingFaceTB/SmolLM2-360M-Instruct", label: "SmolLM2 360M", note: "Best quality / speed balance (~200 MB)" },
-  { id: "HuggingFaceTB/SmolLM2-135M-Instruct", label: "SmolLM2 135M", note: "Faster, smaller download (~80 MB)" },
-  { id: "onnx-community/Qwen2.5-0.5B-Instruct", label: "Qwen2.5 0.5B", note: "Stronger reasoning (~300 MB)" },
-];
-
 export function LocalSchemeGenerator() {
-  const [modelId, setModelId] = useState<LocalModelId>(MODELS[0].id);
+  const [engine, setEngine] = useState<Engine>("transformers");
+  const [modelId, setModelId] = useState<LocalModelId>(ENGINES[2].models[0].id);
+  const [chromeStatus, setChromeStatus] = useState<"available" | "downloadable" | "unavailable" | "checking">("checking");
   const [grade, setGrade] = useState("Grade 7");
   const [subject, setSubject] = useState("Mathematics");
   const [strand, setStrand] = useState("Measurement");
@@ -24,16 +23,23 @@ export function LocalSchemeGenerator() {
   const [extra, setExtra] = useState("");
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<string>("");
+  const [progress, setProgress] = useState("");
+
+  useEffect(() => {
+    checkChromeAI().then(setChromeStatus);
+  }, []);
+
+  const engineDef = ENGINES.find((e) => e.id === engine)!;
+  const models = engineDef.models;
 
   function onProgress(p: LoadProgress) {
-    if (p.status === "download" || p.status === "progress") {
-      const pct = p.progress != null ? Math.round(p.progress) : "";
-      setProgress(`Downloading model${pct ? ` ${pct}%` : ""}…`);
+    if (p.status === "progress" && p.progress != null) {
+      const pct = Math.round(p.progress * 100);
+      setProgress(`${p.text || "Loading"} ${pct}%`);
     } else if (p.status === "ready") {
       setProgress("Model ready. Generating…");
-    } else if (p.status === "initiate") {
-      setProgress("Loading model…");
+    } else {
+      setProgress(p.text || "Loading…");
     }
   }
 
@@ -61,9 +67,8 @@ export function LocalSchemeGenerator() {
     ].filter(Boolean).join("\n");
 
     try {
-      const text = await generateLocalText(prompt, {
-        modelId,
-        maxNewTokens: 512,
+      const text = await generateWithEngine(engine, modelId, prompt, {
+        maxNewTokens: 640,
         temperature: 0.65,
         onProgress,
       });
@@ -84,21 +89,42 @@ export function LocalSchemeGenerator() {
       <div>
         <h1 className="font-display text-4xl leading-tight">Local AI writer</h1>
         <p className="mt-2 max-w-2xl text-ink/80">
-          Generate a scheme draft entirely in your browser. No API key, no server, nothing leaves your device.
-          The model downloads once (then works offline). Best on Chrome/Edge with a decent connection the first time.
+          Generate a scheme draft entirely on your device. No API key, no server, nothing leaves the browser.
+          Choose the engine that fits your hardware.
         </p>
       </div>
 
       <Panel>
         <form onSubmit={onSubmit} className="space-y-4">
-          <Field label="Model" hint="Larger models are smarter but take longer to download and run.">
+          <Field label="Engine" hint="Chrome built-in is fastest if available. WebLLM is the most powerful. Transformers.js works everywhere.">
+            <select
+              className={fieldClass}
+              value={engine}
+              disabled={busy}
+              onChange={(e) => {
+                const next = e.target.value as Engine;
+                setEngine(next);
+                const def = ENGINES.find((item) => item.id === next)!;
+                setModelId(def.models[0].id);
+              }}
+            >
+              {ENGINES.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.label}
+                  {e.id === "chrome" ? ` (${chromeStatus})` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Model" hint={models.find((m) => m.id === modelId)?.note}>
             <select
               className={fieldClass}
               value={modelId}
               disabled={busy}
               onChange={(e) => setModelId(e.target.value as LocalModelId)}
             >
-              {MODELS.map((m) => (
+              {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label} — {m.note}
                 </option>
@@ -138,12 +164,13 @@ export function LocalSchemeGenerator() {
             />
           </Field>
 
-          <button type="submit" className={buttonClass("leaf")} disabled={busy}>
+          <button type="submit" className={buttonClass("leaf")} disabled={busy || (engine === "chrome" && chromeStatus === "unavailable")}>
             {busy ? "Generating…" : "Generate with local AI"}
           </button>
 
-          {progress ? (
-            <p className="text-sm font-medium text-leaf">{progress}</p>
+          {progress ? <p className="text-sm font-medium text-leaf">{progress}</p> : null}
+          {engine === "chrome" && chromeStatus === "unavailable" ? (
+            <p className="text-sm text-clay">Chrome built-in AI is not available in this browser. Switch to WebLLM or Transformers.js.</p>
           ) : null}
         </form>
       </Panel>
@@ -162,12 +189,9 @@ export function LocalSchemeGenerator() {
               Copy
             </button>
           </div>
-          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-paper p-4 text-sm leading-relaxed text-ink">
-            {output}
-          </pre>
+          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-paper p-4 text-sm leading-relaxed text-ink">{output}</pre>
           <p className="mt-3 text-xs text-ink/65">
-            Local models are smaller than cloud writers. Review and edit before teaching or printing.
-            For full structured schemes with official columns, use the main Generate page (requires AI keys).
+            Review and edit before teaching. For full structured schemes with official columns, use the main Generate page (cloud AI).
           </p>
         </Panel>
       ) : null}
