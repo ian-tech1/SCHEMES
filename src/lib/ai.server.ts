@@ -678,6 +678,7 @@ function boundedJson(value: unknown, maximumCharacters: number): string {
 function safeWriterError(error: unknown): string {
   const message = error instanceof Error ? error.message : "";
   if (/quality checks/i.test(message)) return "The reply was incomplete.";
+  if (/spending-limit|out of credits|need a Grok subscription|insufficient.?quota|billing/i.test(message)) return "The Grok credits are finished.";
   if (/401|403/.test(message)) return "The key was rejected.";
   if (/429|quota|rate limit/i.test(message)) return "The free limit was reached.";
   if (/timeout|aborted|exceeded the request time/i.test(message)) return "The writer took too long.";
@@ -755,7 +756,7 @@ export async function writeCbe(
     generationProvenance: {
       ...ready,
       label: "Written by the site generator",
-      notice: `Every connected AI key failed (${lastProblem}). This document was written by the site generator from the topics you selected. Check facts, worked examples and current KICD alignment before you teach or print. It is not an official KICD textbook or a KNEC paper.`,
+      notice: `AI was tried first. Every connected key failed (${lastProblem}). The site generator wrote this copy so the teacher still has a file. Add a Grok key with credits on Variables, then write the notes again. It is not an official KICD textbook or a KNEC paper.`,
     },
   };
 }
