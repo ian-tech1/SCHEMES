@@ -1,9 +1,9 @@
 /**
  * Multi-engine local AI (no API keys).
  * Engines:
- *  - transformers: Transformers.js (ONNX, WebGPU/WASM) — small to medium models
- *  - webllm: WebLLM (MLC, WebGPU) — larger, faster models (Llama, Qwen, Phi, Gemma)
- *  - chrome: Chrome built-in LanguageModel (Gemini Nano) — zero download if available
+ *  - transformers: Transformers.js (ONNX, WebGPU/WASM)
+ *  - webllm: WebLLM (MLC, WebGPU) — best quality
+ *  - chrome: Chrome built-in LanguageModel (Gemini Nano)
  */
 import { pipeline, env, type TextGenerationPipeline } from "@huggingface/transformers";
 
@@ -37,6 +37,8 @@ type EngineInstance = {
   engine: Engine;
   model: LocalModelId;
   generate: (prompt: string, opts: { maxNewTokens?: number; temperature?: number }) => Promise<string>;
+  stream?: (prompt: string, opts: { maxNewTokens?: number; temperature?: number; onToken: (token: string) => void }) => Promise<string>;
+  unload?: () => Promise<void>;
 };
 
 let current: EngineInstance | null = null;
@@ -140,6 +142,26 @@ async function loadWebLLM(modelId: WebLLMModel, onProgress?: (p: LoadProgress) =
       });
       return reply.choices[0]?.message?.content?.trim() ?? "";
     },
+    stream: async (prompt, opts) => {
+      let full = "";
+      const stream = await engine.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: opts.maxNewTokens ?? 512,
+        temperature: opts.temperature ?? 0.7,
+        stream: true,
+      });
+      for await (const chunk of stream) {
+        const token = chunk.choices[0]?.delta?.content ?? "";
+        if (token) {
+          full += token;
+          opts.onToken(token);
+        }
+      }
+      return full.trim();
+    },
+    unload: async () => {
+      await engine.unload();
+    },
   };
 }
 
@@ -166,6 +188,19 @@ async function loadChrome(onProgress?: (p: LoadProgress) => void): Promise<Engin
         temperature: opts.temperature ?? 0.7,
       });
       return String(text).trim();
+    },
+    stream: async (prompt, opts) => {
+      // @ts-expect-error
+      const stream = session.promptStreaming(prompt, {
+        temperature: opts.temperature ?? 0.7,
+      });
+      let full = "";
+      for await (const chunk of stream) {
+        const token = String(chunk);
+        full += token;
+        opts.onToken(token);
+      }
+      return full.trim();
     },
   };
 }
@@ -199,12 +234,39 @@ export async function generateWithEngine(
   engine: Engine,
   modelId: LocalModelId,
   prompt: string,
-  options: { maxNewTokens?: number; temperature?: number; onProgress?: (p: LoadProgress) => void } = {},
+  options: { maxNewTokens?: number; temperature?: number; onProgress?: (p: LoadProgress) => void; onToken?: (token: string) => void } = {},
 ): Promise<string> {
   const instance = await loadEngine(engine, modelId, options.onProgress);
+  if (options.onToken && instance.stream) {
+    return instance.stream(prompt, {
+      maxNewTokens: options.maxNewTokens,
+      temperature: options.temperature,
+      onToken: options.onToken,
+    });
+  }
   return instance.generate(prompt, options);
+}
+
+export async function unloadCurrentEngine(): Promise<void> {
+  if (current?.unload) {
+    await current.unload();
+  }
+  current = null;
 }
 
 export function getCurrentEngine(): { engine: Engine; model: LocalModelId } | null {
   return current ? { engine: current.engine, model: current.model } : null;
+}
+
+/** Chrome Summarizer helper (no key). Returns null if unavailable. */
+export async function summarizeWithChrome(text: string, type: "key-points" | "tldr" | "teaser" = "key-points"): Promise<string | null> {
+  if (typeof window === "undefined" || !("Summarizer" in window)) return null;
+  try {
+    // @ts-expect-error
+    const summarizer = await window.Summarizer.create({ type, format: "plain-text" });
+    // @ts-expect-error
+    return await summarizer.summarize(text);
+  } catch {
+    return null;
+  }
 }

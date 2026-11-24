@@ -5,6 +5,8 @@ import {
   ENGINES,
   checkChromeAI,
   generateWithEngine,
+  unloadCurrentEngine,
+  summarizeWithChrome,
   type Engine,
   type LocalModelId,
   type LoadProgress,
@@ -21,9 +23,12 @@ export function LocalSchemeGenerator() {
   const [term, setTerm] = useState("Term 3");
   const [weeks, setWeeks] = useState("1-4");
   const [extra, setExtra] = useState("");
+  const [maxTokens, setMaxTokens] = useState(640);
+  const [temperature, setTemperature] = useState(0.65);
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
+  const [streaming, setStreaming] = useState(false);
 
   useEffect(() => {
     checkChromeAI().then(setChromeStatus);
@@ -46,6 +51,7 @@ export function LocalSchemeGenerator() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
+    setStreaming(true);
     setOutput("");
     setProgress("Preparing…");
 
@@ -68,11 +74,14 @@ export function LocalSchemeGenerator() {
 
     try {
       const text = await generateWithEngine(engine, modelId, prompt, {
-        maxNewTokens: 640,
-        temperature: 0.65,
+        maxNewTokens: maxTokens,
+        temperature,
         onProgress,
+        onToken: (token) => {
+          setOutput((prev) => prev + token);
+        },
       });
-      setOutput(text);
+      if (!streaming) setOutput(text);
       setProgress("");
       toast.success("Local scheme draft ready.");
     } catch (err) {
@@ -81,7 +90,38 @@ export function LocalSchemeGenerator() {
       setProgress("");
     } finally {
       setBusy(false);
+      setStreaming(false);
     }
+  }
+
+  function downloadDraft() {
+    if (!output) return;
+    const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scheme-${grade.replace(/\s+/g, "-")}-${subject.replace(/\s+/g, "-")}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Draft downloaded.");
+  }
+
+  async function summarize() {
+    if (!output) return;
+    setBusy(true);
+    const summary = await summarizeWithChrome(output, "key-points");
+    if (summary) {
+      setOutput((prev) => `${prev}\n\n--- Key points ---\n${summary}`);
+      toast.success("Summary added.");
+    } else {
+      toast.error("Chrome Summarizer not available.");
+    }
+    setBusy(false);
+  }
+
+  async function unload() {
+    await unloadCurrentEngine();
+    toast.success("Model unloaded from memory.");
   }
 
   return (
@@ -90,7 +130,7 @@ export function LocalSchemeGenerator() {
         <h1 className="font-display text-4xl leading-tight">Local AI writer</h1>
         <p className="mt-2 max-w-2xl text-ink/80">
           Generate a scheme draft entirely on your device. No API key, no server, nothing leaves the browser.
-          Choose the engine that fits your hardware.
+          Streaming is used when the engine supports it.
         </p>
       </div>
 
@@ -133,6 +173,33 @@ export function LocalSchemeGenerator() {
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
+            <Field label={`Max tokens: ${maxTokens}`}>
+              <input
+                type="range"
+                min={128}
+                max={1024}
+                step={64}
+                value={maxTokens}
+                onChange={(e) => setMaxTokens(Number(e.target.value))}
+                disabled={busy}
+                className="w-full"
+              />
+            </Field>
+            <Field label={`Temperature: ${temperature.toFixed(2)}`}>
+              <input
+                type="range"
+                min={0.1}
+                max={1.2}
+                step={0.05}
+                value={temperature}
+                onChange={(e) => setTemperature(Number(e.target.value))}
+                disabled={busy}
+                className="w-full"
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Grade">
               <input className={fieldClass} value={grade} onChange={(e) => setGrade(e.target.value)} disabled={busy} />
             </Field>
@@ -164,9 +231,14 @@ export function LocalSchemeGenerator() {
             />
           </Field>
 
-          <button type="submit" className={buttonClass("leaf")} disabled={busy || (engine === "chrome" && chromeStatus === "unavailable")}>
-            {busy ? "Generating…" : "Generate with local AI"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" className={buttonClass("leaf")} disabled={busy || (engine === "chrome" && chromeStatus === "unavailable")}>
+              {busy ? (streaming ? "Streaming…" : "Generating…") : "Generate with local AI"}
+            </button>
+            <button type="button" className={buttonClass("ghost")} disabled={busy} onClick={() => void unload()}>
+              Unload model
+            </button>
+          </div>
 
           {progress ? <p className="text-sm font-medium text-leaf">{progress}</p> : null}
           {engine === "chrome" && chromeStatus === "unavailable" ? (
@@ -177,19 +249,21 @@ export function LocalSchemeGenerator() {
 
       {output ? (
         <Panel>
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-2xl">Draft</h2>
-            <button
-              type="button"
-              className={buttonClass("ghost")}
-              onClick={() => {
-                navigator.clipboard.writeText(output).then(() => toast.success("Copied."));
-              }}
-            >
-              Copy
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-2xl">Draft{streaming ? " (streaming)" : ""}</h2>
+            <div className="flex gap-2">
+              <button type="button" className={buttonClass("ghost")} onClick={() => navigator.clipboard.writeText(output).then(() => toast.success("Copied."))}>
+                Copy
+              </button>
+              <button type="button" className={buttonClass("ghost")} onClick={downloadDraft}>
+                Download .txt
+              </button>
+              <button type="button" className={buttonClass("ghost")} disabled={busy} onClick={() => void summarize()}>
+                Add key points
+              </button>
+            </div>
           </div>
-          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-paper p-4 text-sm leading-relaxed text-ink">{output}</pre>
+          <pre className="mt-3 max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-paper p-4 text-sm leading-relaxed text-ink">{output}</pre>
           <p className="mt-3 text-xs text-ink/65">
             Review and edit before teaching. For full structured schemes with official columns, use the main Generate page (cloud AI).
           </p>
